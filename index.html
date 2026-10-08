@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>brother.exe</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Unbounded:wght@700;900&display=swap">
+<style>
+/* Layout: одно окно терминала в янтарном фосфоре; сначала идёт «сборка», затем торт и поздравление */
+:root{
+  --bg:#1a120b; --panel:#22180f; --bar:#2e2116;
+  --fg:#f3c77b; --dim:#9c7c52; --cyan:#8fd3cf; --red:#ff7a66; --ok:#b5e07a;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  --display:"Unbounded","JetBrains Mono",system-ui,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--fg)}
+body{font-family:var(--mono);font-size:15px;line-height:1.55;padding-inline:16px;padding-block:24px;min-height:100%}
+.win{max-width:760px;margin:0 auto;background:var(--panel);border:1px solid #3a2a1b;border-radius:10px;overflow:hidden;box-shadow:0 0 60px rgba(243,199,123,.08)}
+.bar{display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--bar);font-size:12px;color:var(--dim)}
+.dot{width:11px;height:11px;border-radius:50%;background:#5a4430}
+.dot:nth-child(1){background:var(--red)}.dot:nth-child(2){background:var(--fg)}.dot:nth-child(3){background:var(--ok)}
+.bar span.t{margin-left:8px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar button{margin-left:auto}
+#out{padding:16px 18px 22px;white-space:pre-wrap;word-break:break-word;min-height:420px;text-shadow:0 0 6px rgba(243,199,123,.35)}
+.p{color:var(--cyan)}.d{color:var(--dim)}.e{color:var(--red)}.ok{color:var(--ok)}.w{color:#ffd166}
+.cur{display:inline-block;width:.6em;background:var(--fg);animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+pre.cake{margin:14px 0 0;font-family:var(--mono);line-height:1.15;overflow-x:auto;color:var(--fg)}
+.fl{color:#ffb347;animation:flick .25s infinite alternate}
+@keyframes flick{to{color:#ff6b3d}}
+h1{font-family:var(--display);font-weight:900;font-size:clamp(28px,7vw,52px);line-height:1.05;margin:18px 0 6px;text-wrap:balance;color:var(--fg);text-shadow:0 0 18px rgba(243,199,123,.45)}
+.msg{max-width:60ch;white-space:normal;color:var(--fg)}
+.msg p{margin:.6em 0}
+.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px;white-space:normal}
+button{font:inherit;font-size:13px;color:var(--bg);background:var(--fg);border:0;border-radius:6px;padding:8px 14px;cursor:pointer}
+a.src{display:inline-flex;align-items:center;color:var(--dim);border:1px solid #4a3622;border-radius:6px;padding:4px 10px;font-size:12px;text-decoration:none}
+a.src:hover{color:var(--fg)}
+button.ghost{background:transparent;color:var(--dim);border:1px solid #4a3622;padding:4px 10px;font-size:12px}
+button:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+button:hover{filter:brightness(1.1)}
+canvas{position:fixed;inset:0;pointer-events:none;width:100%;height:100%}
+.hint{color:var(--dim);font-size:12px;text-align:center;margin-top:12px}
+</style>
+</head>
+<body>
+
+<div class="win" role="main">
+  <div class="bar"><i class="dot"></i><i class="dot"></i><i class="dot"></i><span class="t" id="title">brother@family: ~/birthday</span><button class="ghost" id="skip">пропустить ⏭</button></div>
+  <div id="out" aria-live="polite"></div>
+</div>
+<p class="hint">нажми «пропустить», если не терпится</p>
+<canvas id="fx"></canvas>
+
+<script>
+/* ======= НАСТРОЙКИ — поменяй под брата ======= */
+const NAME = "Брат";        // имя: например "Саша"
+const AGE  = 21;            // сколько исполняется
+const FROM = "твой брат";   // подпись
+/* ============================================ */
+
+const out = document.getElementById('out');
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+let fast = reduce;
+const sleep = ms => fast ? Promise.resolve() : new Promise(r => setTimeout(r, ms));
+const esc = s => s.replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+
+function line(html){ const d=document.createElement('div'); d.innerHTML=html; out.appendChild(d); return d; }
+async function cmd(text){
+  const d=line('<span class="p">brother@family</span>:<span class="d">~</span>$ ');
+  const cur=document.createElement('span'); cur.className='cur'; cur.innerHTML='&nbsp;'; d.appendChild(cur);
+  for(const ch of text){ cur.before(ch); await sleep(35+Math.random()*45); }
+  cur.remove(); await sleep(250);
+}
+async function say(html,ms=380){ line(html); await sleep(ms); }
+async function bar(label,ms=1200){
+  const d=line(''); const n=24;
+  for(let i=0;i<=n;i++){ d.innerHTML=`${label} [${'#'.repeat(i)}${'.'.repeat(n-i)}] ${Math.round(i/n*100)}%`; await sleep(ms/n); }
+}
+
+const prevAge = AGE-1;
+async function run(){
+  await cmd(`sudo ./birthday --target=${NAME.toLowerCase()} --age=${AGE}`);
+  await say('[sudo] password for brother: ********', 500);
+  await say('<span class="d">Сверяем дату с системными часами...</span> <span class="ok">совпадает</span>');
+  await say(`Обнаружена версия <span class="w">${NAME} v${prevAge}.0</span>. Доступно обновление до <span class="ok">v${AGE}.0</span>.`, 600);
+  await bar('Скачиваем патч');
+  await say(`<span class="w">warning:</span> unused variable \`свободное_время\` — переменная объявлена, но не используется`);
+  await say(`<span class="w">warning:</span> deprecated: \`сон_до_обеда()\` будет удалён в следующих версиях`);
+  await say(`<span class="e">error[E0042]:</span> возраст не помещается в int8. Переходим на bigint... <span class="ok">ok</span>`, 700);
+  await cmd('npm install cake candles presents --save');
+  await say('<span class="d">npm WARN</span> candles@'+AGE+'.0.0 требует огнетушитель как peer dependency');
+  await bar('Устанавливаем торт', 900);
+  await say(`<span class="ok">added ${AGE} candles</span>, 1 cake, ∞ поздравлений из 1 семьи`);
+  await cmd('npm test');
+  await say(`  <span class="ok">✓</span> умный`,250);
+  await say(`  <span class="ok">✓</span> добрый`,250);
+  await say(`  <span class="ok">✓</span> чинит всем родственникам компьютеры`,250);
+  await say(`  <span class="ok">✓</span> лучший брат <span class="d">(флакающий тест не обнаружен)</span>`,250);
+  await say(`  <span class="w">○</span> просыпается до 10 утра <span class="d">— skipped</span>`,500);
+  await say(`<span class="ok">Tests: 4 passed, 1 skipped, 0 failed</span>`);
+  await cmd(`git commit -m "${NAME}: релиз v${AGE}.0"`);
+  await say(`[main ${Math.random().toString(16).slice(2,9)}] ${NAME}: релиз v${AGE}.0`);
+  await say(` 365 files changed, ∞ insertions(+), 0 deletions(-)`, 500);
+  await cmd('./deploy --prod --friday');
+  await say('<span class="e">Деплой в пятницу?!</span> Ладно, сегодня можно.', 700);
+  show();
+}
+
+function cakeArt(lit){
+  const f = lit ? '<span class="fl">)</span>' : '<span class="d">~</span>';
+  const c = '|';
+  return [
+`      ${f}  ${f}  ${f}  ${f}  ${f}`,
+`      ${c}  ${c}  ${c}  ${c}  ${c}`,
+`   .-'${'~'.repeat(15)}'-.`,
+`  |   HAPPY BIRTHDAY    |`,
+`  |~~~~~~~~~~~~~~~~~~~~~|`,
+`  |  {  v${String(AGE).padEnd(2)}.0 build  }  |`,
+`  |_____________________|`,
+` (_______________________)`].join('\n');
+}
+
+let lit = true;
+function show(){
+  document.getElementById('skip').hidden = true;
+  document.getElementById('title').textContent = `${NAME.toLowerCase()} v${AGE}.0 — deployed`;
+  const box=document.createElement('div');
+  box.innerHTML = `
+<pre class="cake" id="cake">${cakeArt(true)}</pre>
+<h1>С днём рождения, ${esc(NAME)}!</h1>
+<div class="msg">
+<p>Пусть код компилируется с первого раза, баги находятся до продакшена, а легаси достаётся кому-нибудь другому.</p>
+<p>Желаю зелёных тестов, быстрых ревью, стабильного прода и чтобы жизнь была как хороший рефакторинг: лучше, чем было, и без поломок.</p>
+<p class="d">// ${esc(FROM)} ❤</p>
+</div>
+<div class="actions">
+  <button id="blow">задуть свечи</button>
+  <button class="ghost" id="again">перезапустить ↻</button>
+  <a class="ghost src" href="https://gist.github.com/alexzovv/f778f5c4248e27c7f521b954d5ec41c6" target="_blank" rel="noopener">исходник на Python ↗</a>
+</div>`;
+  out.appendChild(box);
+  document.getElementById('blow').onclick = () => {
+    lit = !lit;
+    document.getElementById('cake').innerHTML = cakeArt(lit);
+    document.getElementById('blow').textContent = lit ? 'задуть свечи' : 'зажечь снова';
+    if(!lit) confetti();
+  };
+  document.getElementById('again').onclick = () => location.reload();
+  confetti();
+}
+
+/* конфетти — нули и единицы */
+const cv=document.getElementById('fx'), ctx=cv.getContext('2d');
+function confetti(){
+  if(reduce) return;
+  const W=cv.width=innerWidth, H=cv.height=innerHeight;
+  const cols=['#f3c77b','#8fd3cf','#b5e07a','#ff7a66','#ffd166'];
+  const ps=Array.from({length:140},()=>({x:Math.random()*W,y:-20-Math.random()*H*.5,v:2+Math.random()*4,
+    s:12+Math.random()*12,t:Math.random()<.5?'0':'1',c:cols[Math.random()*cols.length|0],r:Math.random()*6}));
+  let f=0;
+  (function tick(){
+    ctx.clearRect(0,0,W,H);
+    ps.forEach(p=>{p.y+=p.v;p.x+=Math.sin((p.y+p.r*40)/40);ctx.fillStyle=p.c;ctx.font=`700 ${p.s}px JetBrains Mono, monospace`;ctx.fillText(p.t,p.x,p.y);});
+    if(++f<260) requestAnimationFrame(tick); else ctx.clearRect(0,0,W,H);
+  })();
+}
+
+document.getElementById('skip').onclick = () => { fast = true; };
+run();
+</script>
+</body>
+</html>
