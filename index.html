@@ -51,7 +51,6 @@ canvas{position:fixed;inset:0;pointer-events:none;width:100%;height:100%}
   <div class="bar"><i class="dot"></i><i class="dot"></i><i class="dot"></i><span class="t" id="title">brother@family: ~/birthday</span><button class="ghost" id="skip">пропустить ⏭</button></div>
   <div id="out" aria-live="polite"></div>
 </div>
-<p class="hint">нажми «пропустить», если не терпится</p>
 <canvas id="fx"></canvas>
 
 <script>
@@ -169,7 +168,7 @@ function confetti(){
 }
 
 document.getElementById('skip').onclick = () => { fast = true; };
-run();
+show();
 </script>
 </body>
 </html>
